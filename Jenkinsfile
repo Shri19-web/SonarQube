@@ -22,7 +22,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withCredentials([string(credentialsId: '0173e7db-1474-4208-9098-86c7cec00dd9', variable: 'SONAR_TOKEN')]) {
+                withCredentials([string(credentialsId: '50d02dea-e285-43e0-892f-f4a52b2db82d', variable: 'SONAR_TOKEN')]) {
                     withSonarQubeEnv('MySonarQube') {
                         script {
                             // Get Sonar Scanner path
