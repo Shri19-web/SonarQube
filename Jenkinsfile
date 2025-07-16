@@ -22,7 +22,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withCredentials([string(credentialsId: '50d02dea-e285-43e0-892f-f4a52b2db82d', variable: 'SONAR_TOKEN')]) {
+                withCredentials([string(credentialsId: '3e0c8af5-4458-438b-9317-f8ebb62f1aea', variable: 'SONAR_TOKEN')]) {
                     withSonarQubeEnv('MySonarQube') {
                         script {
                             // Get Sonar Scanner path
@@ -31,7 +31,7 @@ pipeline {
                                ${scannerHome}/bin/sonar-scanner \\
                                 -Dsonar.projectKey=myproject \
                                 -Dsonar.sources=. \
-                                -Dsonar.host.url=http://65.2.30.107:9000 \
+                                -Dsonar.host.url=http://43.205.139.119:9000 \
                                 -Dsonar.login=$SONAR_TOKEN
                             """
                         }
