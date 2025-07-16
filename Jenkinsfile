@@ -4,17 +4,22 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/Shri19-web/SonarQube.git'
+                git branch: 'main', url: 'https://github.com/Shri19-web/SonarQube.git'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('MySonarQube') {
-                    sh 'sonar-scanner -Dsonar.projectKey=my-project \
-                                      -Dsonar.sources=. \
-                                      -Dsonar.host.url=http://13.233.168.101:9000 \
-                                      -Dsonar.login=<your-token>'
+                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
+                    withSonarQubeEnv('SonarQube') {
+                        sh '''
+                          sonar-scanner \
+                          -Dsonar.projectKey=myproject \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://65.2.30.107:9000 \
+                          -Dsonar.login=$MySonarQube
+                        '''
+                    }
                 }
             }
         }
