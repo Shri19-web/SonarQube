@@ -23,7 +23,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withCredentials([string(credentialsId: '0173e7db-1474-4208-9098-86c7cec00dd9', variable: 'SONAR_TOKEN')]) {
-                    withSonarQubeEnv('SonarQube') {
+                    withSonarQubeEnv('MySonarQube') {
                         script {
                             // Get Sonar Scanner path
                             def scannerHome = tool 'sonar_scanner'  // this name must match the one in Global Tool Config
