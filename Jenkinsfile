@@ -6,14 +6,10 @@ pipeline {
         choice(name: 'ACTION', choices: ['build', 'test', 'deploy'], description: 'Build action')
     }
 
-    tools {
-        sonarQubeScanner 'MySonarQube'
-    }
-
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Shri19-web/SonarQube.git'
+                git branch: 'main', url: 'https://github.com/Shri19-web/Cproject.git'
             }
         }
 
@@ -26,16 +22,22 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                          sonar-scanner \
-                          -Dsonar.projectKey=SonarQube \
-                          -Dsonar.sources=. \
-                          -Dsonar.host.url=http://65.2.30.107:9000 \
-                          -Dsonar.login=$squ_ef04268de784c51eeaa2f579a7f0f75f181fbe61
-                        '''
+                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
+                    withSonarQubeEnv('SonarQube') {
+                        script {
+                            // Get Sonar Scanner path
+                            def scannerHome = tool 'sonar_scanner'  // this name must match the one in Global Tool Config
+                            sh """
+                              ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=myproject \
+                                -Dsonar.sources=. \
+                                -Dsonar.host.url=http://65.2.30.107:9000 \
+                                -Dsonar.login=$VIDYA
+                            """
+                        }
                     }
                 }
             }
-        }
-    }
+        }
+    }
+}
