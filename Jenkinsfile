@@ -9,17 +9,25 @@ pipeline {
     tools {
         sonarQubeScanner 'SonarScanner'
     }
+
+    stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/Shri19-web/SonarQube.git'
             }
         }
 
+        stage('Print Parameters') {
+            steps {
+                echo "Running in environment: ${params.ENV}"
+                echo "Action selected: ${params.ACTION}"
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
-                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                    withSonarQubeEnv('SonarQube') {
-                        sh '''
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
                           sonar-scanner \
                           -Dsonar.projectKey=myproject \
                           -Dsonar.sources=. \
