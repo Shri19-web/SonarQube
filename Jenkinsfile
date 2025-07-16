@@ -7,7 +7,7 @@ pipeline {
     }
 
     tools {
-        sonarQubeScanner 'SonarScanner'
+        sonarQubeScanner 'MySonarQube'
     }
 
     stages {
@@ -32,7 +32,7 @@ pipeline {
                           -Dsonar.projectKey=myproject \
                           -Dsonar.sources=. \
                           -Dsonar.host.url=http://65.2.30.107:9000 \
-                          -Dsonar.login=$MySonarQube
+                          -Dsonar.login=$squ_ef04268de784c51eeaa2f579a7f0f75f181fbe61
                         '''
                     }
                 }
