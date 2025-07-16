@@ -1,43 +1,39 @@
 pipeline {
     agent any
-
     parameters {
         string(name: 'ENV', defaultValue: 'dev', description: 'Environment to deploy')
         choice(name: 'ACTION', choices: ['build', 'test', 'deploy'], description: 'Build action')
     }
-
+    tools {
+        sonarQubeScanner 'MySonarScanner'
+    }
+    environment {
+        SONAR_PROJECT_KEY = 'my-project'
+    }
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Shri19-web/Cproject.git'
+                git branch: 'main', url: 'https://github.com/Shri19-web/SonarQube.git'
             }
         }
-
         stage('Print Parameters') {
             steps {
                 echo "Running in environment: ${params.ENV}"
                 echo "Action selected: ${params.ACTION}"
             }
         }
-
         stage('SonarQube Analysis') {
             steps {
-                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                    withSonarQubeEnv('SonarQube') {
-                        script {
-                            // Get Sonar Scanner path
-                            def scannerHome = tool 'sonar_scanner'  // this name must match the one in Global Tool Config
-                            sh """
-                              ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=myproject \
-                                -Dsonar.sources=. \
-                                -Dsonar.host.url=http://65.2.30.107:9000 \
-                                -Dsonar.login=$VIDYA
-                            """
-                        }
-                    }
+                withSonarQubeEnv('MySonar') {
+                    sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://65.2.30.107:9000 \
+                          -Dsonar.login=0173e7db-1474-4208-9098-86c7cec00dd9
+                    """
                 }
             }
-        }
-    }
+        }
+    }
 }
