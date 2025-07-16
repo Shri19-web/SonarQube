@@ -28,7 +28,7 @@ pipeline {
                             // Get Sonar Scanner path
                             def scannerHome = tool 'sonar_scanner'  // this name must match the one in Global Tool Config
                             sh """
-                              ${scannerHome}/bin/sonar-scanner \
+                               "${scannerHome}/bin/sonar-scanner" \\
                                 -Dsonar.projectKey=myproject \
                                 -Dsonar.sources=. \
                                 -Dsonar.host.url=http://65.2.30.107:9000 \
