@@ -10,6 +10,7 @@ pipeline {
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')     // Username + Password
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')    // Username + Password
     NEXUS_DOCKER_REPO  = '13.126.160.215:5000/docker-dev'
+    SONAR_HOST         = 'http://3.6.94.147:30200'      // ✅ Updated IP
   }
 
   parameters {
@@ -36,7 +37,7 @@ pipeline {
     stage('Check SonarQube') {
       steps {
         echo '🔍 Verifying SonarQube server availability...'
-        sh 'curl -s --fail http://3.6.94.147:30200/ > /dev/null || { echo "❌ SonarQube is not reachable!"; exit 1; }'
+        sh 'curl -s --fail $SONAR_HOST/ > /dev/null || { echo "❌ SonarQube is not reachable!"; exit 1; }'
       }
     }
 
@@ -47,7 +48,7 @@ pipeline {
           sh '''
             mvn clean verify sonar:sonar \
               -Dsonar.projectKey=myproject \
-              -Dsonar.host.url=http://15.206.189.87:30200/ \
+              -Dsonar.host.url=$SONAR_HOST \
               -Dsonar.login=$SONAR_TOKEN
           '''
         }
