@@ -32,13 +32,19 @@ pipeline {
       }
     }
 
+    stage('Check SonarQube') {
+      steps {
+        sh 'curl -s --fail http://15.206.189.87:30200 > /dev/null || { echo "SonarQube is not reachable!"; exit 1; }'
+      }
+    }
+
     stage('SonarQube Scan') {
       steps {
         withSonarQubeEnv('MySonar') {
           sh '''
             mvn clean verify sonar:sonar \
               -Dsonar.projectKey=myproject \
-              -Dsonar.host.url=http://13.126.160.215:30200/ \
+              -Dsonar.host.url=http://15.206.189.87:30200/ \
               -Dsonar.login=$SONAR_TOKEN
           '''
         }
