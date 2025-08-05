@@ -1,14 +1,29 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>com.example</groupId>
-    <artifactId>hello-sonar</artifactId>
-    <version>1.0-SNAPSHOT</version>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  
+  <modelVersion>4.0.0</modelVersion>
 
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-    </properties>
+  <groupId>com.example</groupId>
+  <artifactId>myapp</artifactId>
+  <version>1.0.0-SNAPSHOT</version> <!-- Change to 1.0.0 for release builds -->
+  <packaging>jar</packaging>
+
+  <name>My Application</name>
+  <description>Sample project to deploy artifacts to Nexus</description>
+
+  <distributionManagement>
+    <repository>
+      <id>nexus-release</id>
+      <name>Nexus Release Repo</name>
+      <url>http://43.205.144.144:8081/repository/Maven_releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>nexus-snapshot</id>
+      <name>Nexus Snapshot Repo</name>
+      <url>http://43.205.144.144:8081/repository/Maven_snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+
 </project>
