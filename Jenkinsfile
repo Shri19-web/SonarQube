@@ -6,10 +6,10 @@ pipeline {
   }
 
   environment {
-    SONAR_TOKEN   = credentials('SONAR_TOKEN')     // Secret Text
-    NEXUS_MAVEN   = credentials('NEXUS_MAVEN')     // Username + Password
-    NEXUS_DOCKER  = credentials('NEXUS_DOCKER')    // Username + Password
-    NEXUS_DOCKER_REPO = '13.126.160.215:5000/docker-dev'
+    SONAR_TOKEN        = credentials('SONAR_TOKEN')     // Secret Text
+    NEXUS_MAVEN        = credentials('NEXUS_MAVEN')     // Username + Password
+    NEXUS_DOCKER       = credentials('NEXUS_DOCKER')    // Username + Password
+    NEXUS_DOCKER_REPO  = '13.126.160.215:5000/docker-dev'
   }
 
   parameters {
@@ -62,7 +62,7 @@ pipeline {
 
     stage('Deploy Artifact to Nexus') {
       steps {
-        configFileProvider([configFile(fileId: 'maven-settings', targetLocation: 'settings.xml')]) {
+        configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
           sh 'mvn deploy -s settings.xml -DskipTests'
         }
       }
