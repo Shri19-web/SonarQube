@@ -36,7 +36,7 @@ pipeline {
     stage('Check SonarQube') {
       steps {
         echo '🔍 Verifying SonarQube server availability...'
-        sh 'curl -s --fail http://15.206.189.87:30200 > /dev/null || { echo "❌ SonarQube is not reachable!"; exit 1; }'
+        sh 'curl -s --fail http://3.6.94.147:30200/ > /dev/null || { echo "❌ SonarQube is not reachable!"; exit 1; }'
       }
     }
 
