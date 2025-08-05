@@ -24,6 +24,7 @@ pipeline {
 
     stage('Checkout Code') {
       steps {
+        echo "📥 Checking out branch: ${params.BRANCH_NAME}"
         checkout([
           $class: 'GitSCM',
           branches: [[name: "*/${params.BRANCH_NAME}"]],
@@ -34,12 +35,14 @@ pipeline {
 
     stage('Check SonarQube') {
       steps {
-        sh 'curl -s --fail http://15.206.189.87:30200 > /dev/null || { echo "SonarQube is not reachable!"; exit 1; }'
+        echo '🔍 Verifying SonarQube server availability...'
+        sh 'curl -s --fail http://15.206.189.87:30200 > /dev/null || { echo "❌ SonarQube is not reachable!"; exit 1; }'
       }
     }
 
     stage('SonarQube Scan') {
       steps {
+        echo '🚀 Running SonarQube Scan...'
         withSonarQubeEnv('MySonar') {
           sh '''
             mvn clean verify sonar:sonar \
@@ -53,6 +56,7 @@ pipeline {
 
     stage('Quality Gate') {
       steps {
+        echo '🚦 Waiting for SonarQube Quality Gate result...'
         timeout(time: 10, unit: 'MINUTES') {
           waitForQualityGate abortPipeline: true
         }
@@ -61,6 +65,7 @@ pipeline {
 
     stage('Build & Package') {
       steps {
+        echo '📦 Building project and generating artifact...'
         sh 'mvn clean package'
         archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
       }
@@ -68,6 +73,7 @@ pipeline {
 
     stage('Deploy Artifact to Nexus') {
       steps {
+        echo '📤 Uploading artifact to Nexus Maven repo...'
         configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
           sh 'mvn deploy -s settings.xml -DskipTests'
         }
@@ -76,6 +82,7 @@ pipeline {
 
     stage('Build Docker Image') {
       steps {
+        echo '🐳 Building Docker image...'
         script {
           def image = "${NEXUS_DOCKER_REPO}/hello-app:1.0"
           sh "docker build -t ${image} ."
@@ -85,6 +92,7 @@ pipeline {
 
     stage('Push Docker Image to Nexus') {
       steps {
+        echo '📦 Pushing Docker image to Nexus...'
         script {
           def image = "${NEXUS_DOCKER_REPO}/hello-app:1.0"
           sh """
