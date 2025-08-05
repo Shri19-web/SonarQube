@@ -7,8 +7,8 @@ pipeline {
 
   environment {
     SONAR_TOKEN   = credentials('SONAR_TOKEN')     // Secret Text
-    NEXUS_MAVEN   = credentials('nexus-maven')     // Username + Password
-    NEXUS_DOCKER  = credentials('nexus-docker')    // Username + Password
+    NEXUS_MAVEN   = credentials('NEXUS_MAVEN')     // Username + Password
+    NEXUS_DOCKER  = credentials('NEXUS_DOCKER')    // Username + Password
     NEXUS_DOCKER_REPO = '13.126.160.215:5000/docker-dev'
   }
 
