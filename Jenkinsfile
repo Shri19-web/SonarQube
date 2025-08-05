@@ -9,7 +9,7 @@ pipeline {
     SONAR_TOKEN   = credentials('SONAR_TOKEN')     // Secret Text
     NEXUS_MAVEN   = credentials('nexus-maven')     // Username + Password
     NEXUS_DOCKER  = credentials('nexus-docker')    // Username + Password
-    NEXUS_DOCKER_REPO = '13.126.160.215:5000/docker-dev'  // Replace with your Nexus Docker repo IP:port
+    NEXUS_DOCKER_REPO = '13.126.160.215:5000/docker-dev'
   }
 
   parameters {
@@ -62,10 +62,9 @@ pipeline {
 
     stage('Deploy Artifact to Nexus') {
       steps {
-        sh """
-          mvn deploy -s /var/jenkins_home/.m2/settings.xml \
-            -DskipTests
-        """
+        configFileProvider([configFile(fileId: 'maven-settings', targetLocation: 'settings.xml')]) {
+          sh 'mvn deploy -s settings.xml -DskipTests'
+        }
       }
     }
 
