@@ -10,7 +10,7 @@ pipeline {
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')     // Username + Password
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')    // Username + Password
     NEXUS_DOCKER_REPO  = '3.110.215.133:5000/docker-dev'    // ✅ Docker Registry
-    SONAR_HOST         = 'http://13.234.186.239:30200'      // ✅ SonarQube Host
+    SONAR_HOST         = 'http://13.234.186.239:30201'      // ✅ Updated SonarQube Host
   }
 
   parameters {
