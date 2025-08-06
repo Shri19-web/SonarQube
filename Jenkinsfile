@@ -74,8 +74,14 @@ pipeline {
     stage('Deploy Artifact to Nexus') {
       steps {
         echo '📤 Uploading artifact to Nexus Maven repo...'
-        configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
-          sh 'mvn deploy -s settings.xml -DskipTests'
+        withCredentials([usernamePassword(credentialsId: 'NEXUS_MAVEN', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+          configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
+            sh '''
+              sed -i "s|<username>.*</username>|<username>${NEXUS_USER}</username>|" settings.xml
+              sed -i "s|<password>.*</password>|<password>${NEXUS_PASS}</password>|" settings.xml
+              mvn deploy -s settings.xml -DskipTests
+            '''
+          }
         }
       }
     }
@@ -114,3 +120,4 @@ pipeline {
     }
   }
 }
+
