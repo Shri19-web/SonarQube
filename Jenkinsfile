@@ -42,17 +42,20 @@ pipeline {
     }
 
     stage('SonarQube Scan') {
-      steps {
-        echo '🚀 Running SonarQube Scan...'
-        withSonarQubeEnv('MySonar') {
-          sh '''
-            mvn clean verify sonar:sonar \
-              -Dsonar.projectKey=myproject \
-              -Dsonar.login=$SONAR_TOKEN
-          '''
-        }
-      }
+  environment {
+    SONAR_TOKEN = credentials('SONAR_TOKEN')
+  }
+  steps {
+    echo '🚀 Running SonarQube Scan...'
+    withSonarQubeEnv('MySonar') {
+      sh """
+        mvn clean verify sonar:sonar \
+          -Dsonar.projectKey=myproject \
+          -Dsonar.login=${SONAR_TOKEN}
+      """
     }
+  }
+}
 
     stage('Quality Gate') {
       steps {
