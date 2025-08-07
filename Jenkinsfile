@@ -9,7 +9,7 @@ pipeline {
     SONAR_TOKEN        = credentials('SONAR_TOKEN')        // Secret Text
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')        // Username + Password
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')       // Username + Password
-    NEXUS_DOCKER_REPO  = 'http://15.206.27.187:5000/docker-dev'   // ✅ Docker Registry
+    NEXUS_DOCKER_REPO  = 'http://15.206.27.187:5000/docker_dev'   // ✅ Docker Registry
     SONAR_HOST         = 'http://13.235.17.91:30201/'     // ✅ Updated SonarQube Host
   }
 
