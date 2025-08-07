@@ -5,4 +5,3 @@ public class Hello {
         System.out.println("Hiii All.... from Nexus Maven!");
     }
 }
-
