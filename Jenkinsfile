@@ -42,15 +42,13 @@ pipeline {
     }
 
     stage('SonarQube Scan') {
-  environment {
-    SONAR_TOKEN = credentials('SONAR_TOKEN')
-  }
   steps {
-    echo '🚀 Running SonarQube Scan...'
+    echo '🚀 Running SonarQube Scan with coverage...'
     withSonarQubeEnv('MySonar') {
       sh """
         mvn clean verify sonar:sonar \
           -Dsonar.projectKey=myproject \
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
           -Dsonar.login=${SONAR_TOKEN}
       """
     }
@@ -67,14 +65,14 @@ pipeline {
     }
 
     stage('Build & Package') {
-      steps {
-        echo '📦 Building project and generating artifact...'
-        sh 'mvn clean package'
-        archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
-      }
-    }
+  steps {
+    echo '📦 Packaging already verified build...'
+    sh 'mvn package -DskipTests'
+    archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+  }
+}
 
-    stage('Deploy Artifact to Nexus') {
+   stage('Deploy Artifact to Nexus') {
       steps {
         echo '📤 Uploading artifact to Nexus Maven repo...'
         withCredentials([usernamePassword(credentialsId: 'NEXUS_MAVEN', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
