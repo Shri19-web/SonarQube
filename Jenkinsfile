@@ -9,8 +9,8 @@ pipeline {
     SONAR_TOKEN        = credentials('SONAR_TOKEN')        // Secret Text
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')        // Username + Password
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')       // Username + Password
-    NEXUS_DOCKER_REPO  = '15.206.27.187:5000/docker_dev'   // ✅ Docker Registry
-    SONAR_HOST         = 'http://13.235.17.91:30201/'     // ✅ Updated SonarQube Host
+    NEXUS_DOCKER_REPO  = 'http://15.207.84.239:5000/docker_dev'   // ✅ Docker Registry
+    SONAR_HOST         = 'http://52.66.204.169:30201/'     // ✅ Updated SonarQube Host
   }
 
   parameters {
@@ -103,9 +103,9 @@ pipeline {
         script {
           def image = "${NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
           sh """
-            echo "$NEXUS_DOCKER_PSW" | docker login 15.206.27.187:5000 -u "$NEXUS_DOCKER_USR" --password-stdin
+            echo "$NEXUS_DOCKER_PSW" | docker login http://15.207.84.239:5000/ -u "$NEXUS_DOCKER_USR" --password-stdin
             docker push ${image}
-            docker logout 15.206.27.187:5000
+            docker logout http://15.207.84.239:5000/
           """
         }
       }
