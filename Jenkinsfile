@@ -42,18 +42,18 @@ pipeline {
     }
 
     stage('SonarQube Scan') {
-  steps {
-    echo '🚀 Running SonarQube Scan with coverage...'
-    withSonarQubeEnv('MySonar') {
-      sh """
-        mvn clean verify sonar:sonar \
-          -Dsonar.projectKey=myproject \
-          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
-          -Dsonar.login=${SONAR_TOKEN}
-      """
+      steps {
+        echo '🚀 Running SonarQube Scan with coverage...'
+        withSonarQubeEnv('MySonar') {
+          sh """
+            mvn clean verify sonar:sonar \
+              -Dsonar.projectKey=myproject \
+              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+              -Dsonar.login=${SONAR_TOKEN}
+          """
+        }
+      }
     }
-  }
-}
 
     stage('Quality Gate') {
       steps {
@@ -65,14 +65,14 @@ pipeline {
     }
 
     stage('Build & Package') {
-  steps {
-    echo '📦 Packaging already verified build...'
-    sh 'mvn package -DskipTests'
-    archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
-  }
-}
+      steps {
+        echo '📦 Packaging already verified build...'
+        sh 'mvn package -DskipTests'
+        archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+      }
+    }
 
-   stage('Deploy Artifact to Nexus') {
+    stage('Deploy Artifact to Nexus') {
       steps {
         echo '📤 Uploading artifact to Nexus Maven repo...'
         withCredentials([usernamePassword(credentialsId: 'NEXUS_MAVEN', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
@@ -104,14 +104,15 @@ pipeline {
           usernamePassword(credentialsId: 'NEXUS_DOCKER', usernameVariable: 'NEXUS_DOCKER_USR', passwordVariable: 'NEXUS_DOCKER_PSW')
         ]) {
           sh 'cat /etc/docker/daemon.json || echo "No daemon.json found"'
-           sh 'docker info'
+          sh 'docker info'
           script {
             def image = "${NEXUS_DOCKER_REPO.replace('http://', '')}/sonarqube-app:1.0.0-SNAPSHOT"
             sh """
-            echo "$NEXUS_DOCKER_PSW" | docker login http://15.207.84.239:5000/ -u "$NEXUS_DOCKER_USR" --password-stdin
-            docker push ${image}
-            docker logout http://15.207.84.239:5000/
-          """
+              echo "$NEXUS_DOCKER_PSW" | docker login http://15.207.84.239:5000/ -u "$NEXUS_DOCKER_USR" --password-stdin
+              docker push ${image}
+              docker logout http://15.207.84.239:5000/
+            """
+          }
         }
       }
     }
