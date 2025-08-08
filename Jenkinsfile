@@ -9,8 +9,8 @@ pipeline {
     SONAR_TOKEN        = credentials('SONAR_TOKEN')        // Secret Text
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')        // Username + Password
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')       // Username + Password
-    NEXUS_DOCKER_REPO  = 'http://15.207.84.239:5000/docker_dev'   // ✅ Docker Registry
-    SONAR_HOST         = 'http://52.66.204.169:30201/'     // ✅ Updated SonarQube Host
+    NEXUS_DOCKER_REPO  = '15.207.84.239:5000/docker_dev'   // Removed http:// prefix for Docker
+    SONAR_HOST         = 'http://52.66.204.169:30201'      // Removed trailing slash
   }
 
   parameters {
@@ -37,7 +37,7 @@ pipeline {
     stage('Check SonarQube') {
       steps {
         echo '🔍 Verifying SonarQube server availability...'
-        sh 'curl -s --fail $SONAR_HOST/ > /dev/null || { echo "❌ SonarQube is not reachable!"; exit 1; }'
+        sh 'curl -s --fail $SONAR_HOST > /dev/null || { echo "❌ SonarQube is not reachable!"; exit 1; }'
       }
     }
 
@@ -46,10 +46,10 @@ pipeline {
         echo '🚀 Running SonarQube Scan with coverage...'
         withSonarQubeEnv('MySonar') {
           sh """
-            mvn clean verify sonar:sonar \
-              -Dsonar.projectKey=myproject \
-              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
-              -Dsonar.login=${SONAR_TOKEN}
+            mvn clean verify sonar:sonar \\
+              -Dsonar.projectKey=myproject \\
+              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \\
+              -Dsonar.login=$SONAR_TOKEN
           """
         }
       }
@@ -77,11 +77,11 @@ pipeline {
         echo '📤 Uploading artifact to Nexus Maven repo...'
         withCredentials([usernamePassword(credentialsId: 'NEXUS_MAVEN', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
           configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
-            sh '''
-              sed -i "s|<username>.*</username>|<username>${NEXUS_USER}</username>|" settings.xml
-              sed -i "s|<password>.*</password>|<password>${NEXUS_PASS}</password>|" settings.xml
+            sh """
+              sed -i 's|<username>.*</username>|<username>$NEXUS_USER</username>|' settings.xml
+              sed -i 's|<password>.*</password>|<password>$NEXUS_PASS</password>|' settings.xml
               mvn deploy -s settings.xml -DskipTests
-            '''
+            """
           }
         }
       }
@@ -91,7 +91,7 @@ pipeline {
       steps {
         echo '🐳 Building Docker image...'
         script {
-          def image = "${NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
+          def image = "${env.NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
           sh "docker build -t ${image} ."
         }
       }
@@ -100,17 +100,13 @@ pipeline {
     stage('Push Docker Image to Nexus') {
       steps {
         echo '📦 Pushing Docker image to Nexus...'
-        withCredentials([
-          usernamePassword(credentialsId: 'NEXUS_DOCKER', usernameVariable: 'NEXUS_DOCKER_USR', passwordVariable: 'NEXUS_DOCKER_PSW')
-        ]) {
-          sh 'cat /etc/docker/daemon.json || echo "No daemon.json found"'
-          sh 'docker info'
+        withCredentials([usernamePassword(credentialsId: 'NEXUS_DOCKER', usernameVariable: 'NEXUS_DOCKER_USR', passwordVariable: 'NEXUS_DOCKER_PSW')]) {
           script {
-            def image = "${NEXUS_DOCKER_REPO.replace('http://', '')}/sonarqube-app:1.0.0-SNAPSHOT"
+            def image = "${env.NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
             sh """
-              echo "$NEXUS_DOCKER_PSW" | docker login http://15.207.84.239:5000/ -u "$NEXUS_DOCKER_USR" --password-stdin
+              echo "$NEXUS_DOCKER_PSW" | docker login http://${env.NEXUS_DOCKER_REPO.split('/')[0]}/ -u "$NEXUS_DOCKER_USR" --password-stdin
               docker push ${image}
-              docker logout http://15.207.84.239:5000/
+              docker logout http://${env.NEXUS_DOCKER_REPO.split('/')[0]}/
             """
           }
         }
