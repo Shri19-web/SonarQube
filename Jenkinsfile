@@ -9,8 +9,8 @@ pipeline {
     SONAR_TOKEN        = credentials('SONAR_TOKEN')        // Secret Text
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')        // Username + Password
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')       // Username + Password
-    NEXUS_DOCKER_REPO  = '15.207.84.239:5000/docker_dev'   // Removed http:// prefix for Docker
-    SONAR_HOST         = 'http://52.66.204.169:30201'      // Removed trailing slash
+    NEXUS_DOCKER_REPO  = '15.207.84.239:5000/docker_dev'   // Nexus Docker repo (no http:// prefix)
+    SONAR_HOST         = 'http://52.66.204.169:30201'      // SonarQube endpoint (no trailing slash)
   }
 
   parameters {
@@ -36,14 +36,14 @@ pipeline {
 
     stage('Check SonarQube') {
       steps {
-        echo '🔍 Verifying SonarQube server availability...'
-        sh 'curl -s --fail $SONAR_HOST > /dev/null || { echo "❌ SonarQube is not reachable!"; exit 1; }'
+        echo '🔍 Checking SonarQube availability...'
+        sh 'curl -s --fail $SONAR_HOST/api/system/status || { echo "❌ SonarQube is unreachable!"; exit 1; }'
       }
     }
 
     stage('SonarQube Scan') {
       steps {
-        echo '🚀 Running SonarQube Scan with coverage...'
+        echo '🚀 Running SonarQube scan...'
         withSonarQubeEnv('MySonar') {
           sh """
             mvn clean verify sonar:sonar \\
@@ -57,7 +57,7 @@ pipeline {
 
     stage('Quality Gate') {
       steps {
-        echo '🚦 Waiting for SonarQube Quality Gate result...'
+        echo '🚦 Waiting for SonarQube Quality Gate...'
         timeout(time: 20, unit: 'MINUTES') {
           waitForQualityGate abortPipeline: true
         }
@@ -66,7 +66,7 @@ pipeline {
 
     stage('Build & Package') {
       steps {
-        echo '📦 Packaging already verified build...'
+        echo '📦 Building the project...'
         sh 'mvn package -DskipTests'
         archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
       }
@@ -74,7 +74,7 @@ pipeline {
 
     stage('Deploy Artifact to Nexus') {
       steps {
-        echo '📤 Uploading artifact to Nexus Maven repo...'
+        echo '📤 Deploying artifact to Nexus...'
         withCredentials([usernamePassword(credentialsId: 'NEXUS_MAVEN', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
           configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
             sh """
@@ -103,10 +103,11 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: 'NEXUS_DOCKER', usernameVariable: 'NEXUS_DOCKER_USR', passwordVariable: 'NEXUS_DOCKER_PSW')]) {
           script {
             def image = "${env.NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
+            def registry = env.NEXUS_DOCKER_REPO.split('/')[0]
             sh """
-              echo "$NEXUS_DOCKER_PSW" | docker login http://${env.NEXUS_DOCKER_REPO.split('/')[0]}/ -u "$NEXUS_DOCKER_USR" --password-stdin
+              echo "$NEXUS_DOCKER_PSW" | docker login http://${registry} -u "$NEXUS_DOCKER_USR" --password-stdin
               docker push ${image}
-              docker logout http://${env.NEXUS_DOCKER_REPO.split('/')[0]}/
+              docker logout http://${registry}
             """
           }
         }
@@ -116,10 +117,10 @@ pipeline {
 
   post {
     success {
-      echo '✅ Full CI/CD pipeline successful.'
+      echo '✅ Full CI/CD pipeline succeeded.'
     }
     failure {
-      echo '❌ Pipeline failed.'
+      echo '❌ Pipeline failed. Please check the logs.'
     }
   }
 }
