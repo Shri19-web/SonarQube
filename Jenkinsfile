@@ -100,9 +100,14 @@ pipeline {
     stage('Push Docker Image to Nexus') {
       steps {
         echo '📦 Pushing Docker image to Nexus...'
-        script {
-          def image = "${NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
-          sh """
+        withCredentials([
+          usernamePassword(credentialsId: 'NEXUS_DOCKER', usernameVariable: 'NEXUS_DOCKER_USR', passwordVariable: 'NEXUS_DOCKER_PSW')
+        ]) {
+          sh 'cat /etc/docker/daemon.json || echo "No daemon.json found"'
+           sh 'docker info'
+          script {
+            def image = "${NEXUS_DOCKER_REPO.replace('http://', '')}/sonarqube-app:1.0.0-SNAPSHOT"
+            sh """
             echo "$NEXUS_DOCKER_PSW" | docker login http://15.207.84.239:5000/ -u "$NEXUS_DOCKER_USR" --password-stdin
             docker push ${image}
             docker logout http://15.207.84.239:5000/
