@@ -25,7 +25,7 @@ pipeline {
 
     stage('Checkout Code') {
       steps {
-        echo "📥 Checking out branch: ${params.BRANCH_NAME}"
+        echo "Checking out branch: ${params.BRANCH_NAME}"
         checkout([
           $class: 'GitSCM',
           branches: [[name: "*/${params.BRANCH_NAME}"]],
@@ -37,13 +37,13 @@ pipeline {
     stage('Check SonarQube') {
       steps {
         echo '🔍 Checking SonarQube availability...'
-        sh 'curl -s --fail $SONAR_HOST/api/system/status || { echo "❌ SonarQube is unreachable!"; exit 1; }'
+        sh 'curl -s --fail $SONAR_HOST/api/system/status || { echo "SonarQube is unreachable!"; exit 1; }'
       }
     }
 
     stage('SonarQube Scan') {
       steps {
-        echo '🚀 Running SonarQube scan...'
+        echo 'Running SonarQube scan...'
         withSonarQubeEnv('MySonar') {
           sh """
             mvn clean verify sonar:sonar \\
@@ -57,7 +57,7 @@ pipeline {
 
     stage('Quality Gate') {
       steps {
-        echo '🚦 Waiting for SonarQube Quality Gate...'
+        echo 'Waiting for SonarQube Quality Gate...'
         timeout(time: 20, unit: 'MINUTES') {
           waitForQualityGate abortPipeline: true
         }
@@ -66,7 +66,7 @@ pipeline {
 
     stage('Build & Package') {
       steps {
-        echo '📦 Building the project...'
+        echo 'Building the project...'
         sh 'mvn package -DskipTests'
         archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
       }
@@ -74,7 +74,7 @@ pipeline {
 
     stage('Deploy Artifact to Nexus') {
       steps {
-        echo '📤 Deploying artifact to Nexus...'
+        echo 'Deploying artifact to Nexus...'
         withCredentials([usernamePassword(credentialsId: 'NEXUS_MAVEN', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
           configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
             sh """
@@ -89,7 +89,7 @@ pipeline {
 
     stage('Build Docker Image') {
       steps {
-        echo '🐳 Building Docker image...'
+        echo 'Building Docker image...'
         script {
           def image = "${env.NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
           sh "docker build -t ${image} ."
@@ -99,7 +99,7 @@ pipeline {
 
     stage('Push Docker Image to Nexus') {
       steps {
-        echo '📦 Pushing Docker image to Nexus...'
+        echo 'Pushing Docker image to Nexus...'
         withCredentials([usernamePassword(credentialsId: 'NEXUS_DOCKER', usernameVariable: 'NEXUS_DOCKER_USR', passwordVariable: 'NEXUS_DOCKER_PSW')]) {
           script {
             def image = "${env.NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
@@ -117,10 +117,10 @@ pipeline {
 
   post {
     success {
-      echo '✅ Full CI/CD pipeline succeeded.'
+      echo 'Full CI/CD pipeline succeeded.'
     }
     failure {
-      echo '❌ Pipeline failed. Please check the logs.'
+      echo 'Pipeline failed. Please check the logs.'
     }
   }
 }
