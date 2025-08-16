@@ -21,9 +21,9 @@
   </properties>
 
   <dependencies>
-    <!-- ✅ Add dependencies here -->
+    <!-- Add dependencies here -->
 
-    <!-- ✅ JUnit 5 for testing -->
+    <!-- JUnit 5 for testing -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
