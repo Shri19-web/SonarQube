@@ -9,8 +9,8 @@ pipeline {
     SONAR_TOKEN        = credentials('SONAR_TOKEN')        // Secret Text
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')        // Username + Password
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')       // Username + Password
-    NEXUS_DOCKER_REPO  = '52.66.198.175:5000/docker_dev'   // Nexus Docker repo (no http:// prefix)
-    SONAR_HOST         = 'http://43.205.242.252:30201/'      // SonarQube endpoint (no trailing slash)
+    NEXUS_DOCKER_REPO  = '52.66.198.175:5000/docker_dev'   // Nexus Docker repo
+    SONAR_HOST         = 'http://43.205.242.252:30201'     // SonarQube endpoint (no trailing slash)
   }
 
   parameters {
@@ -46,9 +46,9 @@ pipeline {
         echo 'Running SonarQube scan...'
         withSonarQubeEnv('MySonar') {
           sh """
-            mvn clean verify sonar:sonar \\
-              -Dsonar.projectKey=myproject \\
-              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \\
+            mvn clean verify sonar:sonar \
+              -Dsonar.projectKey=myproject \
+              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
               -Dsonar.login=$SONAR_TOKEN
           """
         }
@@ -68,11 +68,28 @@ pipeline {
       steps {
         echo 'Fetching SonarQube analysis report...'
         script {
+          // 1. Quality gate status
           sh """
-            curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/qualitygates/project_status?projectKey=myproject" > sonar_report.json
+            curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/qualitygates/project_status?projectKey=myproject" > sonar_quality_gate.json
           """
-          sh 'cat sonar_report.json'
-          archiveArtifacts artifacts: 'sonar_report.json', followSymlinks: false
+
+          // 2. Key metrics
+          sh """
+            curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/measures/component?component=myproject&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,sqale_rating,reliability_rating,security_rating" > sonar_measures.json
+          """
+
+          // 3. Analysis history (for build mapping)
+          sh """
+            curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/project_analyses/search?project=myproject" > sonar_analyses.json
+          """
+
+          // Print summaries in Jenkins logs
+          sh 'echo "--- Quality Gate ---"; cat sonar_quality_gate.json'
+          sh 'echo "--- Measures ---"; cat sonar_measures.json'
+          sh 'echo "--- Analyses ---"; cat sonar_analyses.json'
+
+          // Archive artifacts for build record
+          archiveArtifacts artifacts: 'sonar_*.json', followSymlinks: false
         }
       }
     }
