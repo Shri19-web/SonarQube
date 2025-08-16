@@ -36,7 +36,7 @@ pipeline {
 
     stage('Check SonarQube') {
       steps {
-        echo '🔍 Checking SonarQube availability...'
+        echo 'Checking SonarQube availability...'
         sh 'curl -s --fail $SONAR_HOST/api/system/status || { echo "SonarQube is unreachable!"; exit 1; }'
       }
     }
@@ -60,6 +60,19 @@ pipeline {
         echo 'Waiting for SonarQube Quality Gate...'
         timeout(time: 20, unit: 'MINUTES') {
           waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Fetch SonarQube Report') {
+      steps {
+        echo 'Fetching SonarQube analysis report...'
+        script {
+          sh """
+            curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/qualitygates/project_status?projectKey=myproject" > sonar_report.json
+          """
+          sh 'cat sonar_report.json'
+          archiveArtifacts artifacts: 'sonar_report.json', followSymlinks: false
         }
       }
     }
