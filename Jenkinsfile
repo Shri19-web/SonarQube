@@ -6,11 +6,16 @@ pipeline {
   }
 
   environment {
-    SONAR_TOKEN        = credentials('SONAR_TOKEN')        // Secret Text
-    NEXUS_MAVEN        = credentials('NEXUS_MAVEN')        // Username + Password
-    NEXUS_DOCKER       = credentials('NEXUS_DOCKER')       // Username + Password
-    NEXUS_DOCKER_REPO  = '52.66.198.175:5000/docker_dev'   // Nexus Docker repo
-    SONAR_HOST         = 'http://43.205.242.252:30201'     // SonarQube endpoint (no trailing slash)
+    APP_NAME           = 'sonarqube-app'
+    APP_VERSION        = "1.0.0-${env.BUILD_NUMBER}"
+    PROJECT_KEY        = 'myproject'
+    IMAGE_TAG          = "${APP_NAME}:${APP_VERSION}"
+    SONAR_TOKEN        = credentials('SONAR_TOKEN')
+    NEXUS_MAVEN        = credentials('NEXUS_MAVEN')
+    NEXUS_DOCKER       = credentials('NEXUS_DOCKER')
+    NEXUS_DOCKER_REPO  = '52.66.198.175:5000/docker_dev'
+    SONAR_HOST         = 'http://43.205.242.252:30201'
+    GIT_COMMIT_HASH    = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
   }
 
   parameters {
@@ -34,30 +39,25 @@ pipeline {
       }
     }
 
-    stage('Check SonarQube') {
-      steps {
-        echo 'Checking SonarQube availability...'
-        sh 'curl -s --fail $SONAR_HOST/api/system/status || { echo "SonarQube is unreachable!"; exit 1; }'
-      }
-    }
-
     stage('SonarQube Scan') {
       steps {
-        echo 'Running SonarQube scan...'
-        withSonarQubeEnv('MySonar') {
-          sh """
-            mvn clean verify sonar:sonar \
-              -Dsonar.projectKey=myproject \
-              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
-              -Dsonar.login=$SONAR_TOKEN
-          """
+        script {
+          retry(2) {
+            withSonarQubeEnv('MySonar') {
+              sh """
+                mvn clean verify sonar:sonar \
+                  -Dsonar.projectKey=${PROJECT_KEY} \
+                  -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+                  -Dsonar.login=$SONAR_TOKEN
+              """
+            }
+          }
         }
       }
     }
 
     stage('Quality Gate') {
       steps {
-        echo 'Waiting for SonarQube Quality Gate...'
         timeout(time: 20, unit: 'MINUTES') {
           waitForQualityGate abortPipeline: true
         }
@@ -66,29 +66,18 @@ pipeline {
 
     stage('Fetch SonarQube Report') {
       steps {
-        echo 'Fetching SonarQube analysis report...'
         script {
-          // 1. Quality gate status
-          sh """
-            curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/qualitygates/project_status?projectKey=myproject" > sonar_quality_gate.json
-          """
-
-          // 2. Key metrics
-          sh """
-            curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/measures/component?component=myproject&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,sqale_rating,reliability_rating,security_rating" > sonar_measures.json
-          """
-
-          // 3. Analysis history (for build mapping)
-          sh """
-            curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/project_analyses/search?project=myproject" > sonar_analyses.json
-          """
-
-          // Print summaries in Jenkins logs
-          sh 'echo "--- Quality Gate ---"; cat sonar_quality_gate.json'
-          sh 'echo "--- Measures ---"; cat sonar_measures.json'
-          sh 'echo "--- Analyses ---"; cat sonar_analyses.json'
-
-          // Archive artifacts for build record
+          def reports = [
+            "quality_gate=qualitygates/project_status?projectKey=${PROJECT_KEY}",
+            "measures=measures/component?component=${PROJECT_KEY}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,sqale_rating,reliability_rating,security_rating",
+            "analyses=project_analyses/search?project=${PROJECT_KEY}"
+          ]
+          reports.each { entry ->
+            def (name, endpoint) = entry.split('=')
+            sh """
+              curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/${endpoint}" > sonar_${name}.json
+            """
+          }
           archiveArtifacts artifacts: 'sonar_*.json', followSymlinks: false
         }
       }
@@ -96,7 +85,6 @@ pipeline {
 
     stage('Build & Package') {
       steps {
-        echo 'Building the project...'
         sh 'mvn package -DskipTests'
         archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
       }
@@ -104,13 +92,11 @@ pipeline {
 
     stage('Deploy Artifact to Nexus') {
       steps {
-        echo 'Deploying artifact to Nexus...'
         withCredentials([usernamePassword(credentialsId: 'NEXUS_MAVEN', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
           configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
             sh """
-              sed -i 's|<username>.*</username>|<username>$NEXUS_USER</username>|' settings.xml
-              sed -i 's|<password>.*</password>|<password>$NEXUS_PASS</password>|' settings.xml
-              mvn deploy -s settings.xml -DskipTests
+              mvn deploy -s settings.xml -DskipTests \
+                -Dnexus.username=$NEXUS_USER -Dnexus.password=$NEXUS_PASS
             """
           }
         }
@@ -119,9 +105,8 @@ pipeline {
 
     stage('Build Docker Image') {
       steps {
-        echo 'Building Docker image...'
         script {
-          def image = "${env.NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
+          def image = "${NEXUS_DOCKER_REPO}/${APP_NAME}:${APP_VERSION}-${GIT_COMMIT_HASH}"
           sh "docker build -t ${image} ."
         }
       }
@@ -129,16 +114,17 @@ pipeline {
 
     stage('Push Docker Image to Nexus') {
       steps {
-        echo 'Pushing Docker image to Nexus...'
         withCredentials([usernamePassword(credentialsId: 'NEXUS_DOCKER', usernameVariable: 'NEXUS_DOCKER_USR', passwordVariable: 'NEXUS_DOCKER_PSW')]) {
           script {
-            def image = "${env.NEXUS_DOCKER_REPO}/sonarqube-app:1.0.0-SNAPSHOT"
+            def image = "${NEXUS_DOCKER_REPO}/${APP_NAME}:${APP_VERSION}-${GIT_COMMIT_HASH}"
             def registry = env.NEXUS_DOCKER_REPO.split('/')[0]
-            sh """
-              echo "$NEXUS_DOCKER_PSW" | docker login http://${registry} -u "$NEXUS_DOCKER_USR" --password-stdin
-              docker push ${image}
-              docker logout http://${registry}
-            """
+            retry(2) {
+              sh """
+                echo "$NEXUS_DOCKER_PSW" | docker login http://${registry} -u "$NEXUS_DOCKER_USR" --password-stdin
+                docker push ${image}
+                docker logout http://${registry}
+              """
+            }
           }
         }
       }
@@ -147,10 +133,14 @@ pipeline {
 
   post {
     success {
-      echo 'Full CI/CD pipeline succeeded.'
+      echo "Pipeline succeeded for ${APP_NAME}:${APP_VERSION}-${GIT_COMMIT_HASH}"
     }
     failure {
-      echo 'Pipeline failed. Please check the logs.'
+      echo "Pipeline failed. Check logs."
+      archiveArtifacts artifacts: 'sonar_*.json', allowEmptyArchive: true
+    }
+    always {
+      echo "Build finished: ${currentBuild.currentResult}"
     }
   }
 }
