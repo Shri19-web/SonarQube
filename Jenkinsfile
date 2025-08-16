@@ -9,8 +9,8 @@ pipeline {
     SONAR_TOKEN        = credentials('SONAR_TOKEN')        // Secret Text
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')        // Username + Password
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')       // Username + Password
-    NEXUS_DOCKER_REPO  = '15.207.84.239:5000/docker_dev'   // Nexus Docker repo (no http:// prefix)
-    SONAR_HOST         = 'http://52.66.204.169:30201'      // SonarQube endpoint (no trailing slash)
+    NEXUS_DOCKER_REPO  = '52.66.198.175:5000/docker_dev'   // Nexus Docker repo (no http:// prefix)
+    SONAR_HOST         = 'http://43.205.242.252:30201/'      // SonarQube endpoint (no trailing slash)
   }
 
   parameters {
