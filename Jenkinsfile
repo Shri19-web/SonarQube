@@ -10,12 +10,11 @@ pipeline {
     APP_VERSION        = "1.0.0-${env.BUILD_NUMBER}"
     PROJECT_KEY        = 'myproject'
     IMAGE_TAG          = "${APP_NAME}:${APP_VERSION}"
-    SONAR_TOKEN        = credentials('SONAR_TOKEN')
+    SONAR_TOKEN        = credentials('SONAR_TOKEN')       
     NEXUS_MAVEN        = credentials('NEXUS_MAVEN')
     NEXUS_DOCKER       = credentials('NEXUS_DOCKER')
-    NEXUS_DOCKER_REPO  = '52.66.198.175:5000/docker_dev'
-    SONAR_HOST         = 'http://43.205.242.252:30201'
-    GIT_COMMIT_HASH    = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+    NEXUS_DOCKER_REPO  = 'http://13.234.32.98:5000/docker_dev'
+    SONAR_HOST         = 'http://13.127.144.70:30201/'
   }
 
   parameters {
@@ -39,20 +38,26 @@ pipeline {
       }
     }
 
-    stage('SonarQube Scan') {
+    stage('Set Commit Hash') {
       steps {
         script {
-          retry(2) {
-            withSonarQubeEnv('MySonar') {
-              sh """
-                mvn clean verify sonar:sonar \
-                  -Dsonar.projectKey=${PROJECT_KEY} \
-                  -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
-                  -Dsonar.login=$SONAR_TOKEN
-              """
-            }
-          }
+          env.GIT_COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+          echo "Git Commit Hash: ${env.GIT_COMMIT_HASH}"
         }
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        echo "Running SonarQube analysis..."
+        sh """
+          mvn clean verify sonar:sonar \
+            -Dsonar.projectKey=${PROJECT_KEY} \
+            -Dsonar.projectName=${APP_NAME} \
+            -Dsonar.host.url=${SONAR_HOST} \
+            -Dsonar.token=${SONAR_TOKEN} \
+            -Dsonar.projectVersion=${BUILD_NUMBER}
+        """
       }
     }
 
@@ -75,7 +80,7 @@ pipeline {
           reports.each { entry ->
             def (name, endpoint) = entry.split('=')
             sh """
-              curl -s -u $SONAR_TOKEN: "$SONAR_HOST/api/${endpoint}" > sonar_${name}.json
+              curl -s -u ${SONAR_TOKEN}: "${SONAR_HOST}/api/${endpoint}" > sonar_${name}.json
             """
           }
           archiveArtifacts artifacts: 'sonar_*.json', followSymlinks: false
@@ -95,8 +100,7 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: 'NEXUS_MAVEN', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
           configFileProvider([configFile(fileId: '63f74aca-dc42-4dd8-98e0-f61960f5fc24', targetLocation: 'settings.xml')]) {
             sh """
-              mvn deploy -s settings.xml -DskipTests \
-                -Dnexus.username=$NEXUS_USER -Dnexus.password=$NEXUS_PASS
+              mvn deploy -s settings.xml -DskipTests
             """
           }
         }
