@@ -50,14 +50,16 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         echo "Running SonarQube analysis..."
-        sh """
-          mvn clean verify sonar:sonar \
-            -Dsonar.projectKey=${PROJECT_KEY} \
-            -Dsonar.projectName=${APP_NAME} \
-            -Dsonar.host.url=${SONAR_HOST} \
-            -Dsonar.token=${SONAR_TOKEN} \
-            -Dsonar.projectVersion=${BUILD_NUMBER}
-        """
+        withSonarQubeEnv('SonarQubeServer') {    // must match your Jenkins SonarQube server name
+          sh """
+            mvn clean verify sonar:sonar \
+              -Dsonar.projectKey=${PROJECT_KEY} \
+              -Dsonar.projectName=${APP_NAME} \
+              -Dsonar.host.url=${SONAR_HOST} \
+              -Dsonar.login=${SONAR_TOKEN} \
+              -Dsonar.projectVersion=${BUILD_NUMBER}
+          """
+        }
       }
     }
 
